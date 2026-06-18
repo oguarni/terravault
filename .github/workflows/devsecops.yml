@@ -425,7 +425,7 @@ jobs:
 
       - name: Run Claude DevSecOps auto-fix
         if: steps.limits.outputs.proceed == 'true'
-        uses: anthropics/claude-code-action@0f97b95b6536c26e5f6bd90faec370d41695beca # v1
+        uses: anthropics/claude-code-action@806af32823ef69c8ef357086c573a902af641307 # v1
         env:
           TERRAVAULT_API_KEY_HASH: "$2b$12$LJ3m9ZkRjWyEbhMxBqXvkuN/3QlGYbTEwHqMFEVBBxkLpN0uWxjAq"
           TERRAVAULT_ENVIRONMENT: development
