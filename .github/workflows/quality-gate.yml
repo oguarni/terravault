@@ -24,7 +24,7 @@ jobs:
       passed: ${{ steps.gate.outputs.passed }}
     steps:
       - name: Checkout PR head
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
@@ -147,7 +147,7 @@ jobs:
 
       - name: Checkout PR branch (writable)
         if: steps.limits.outputs.proceed == 'true'
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
@@ -187,7 +187,7 @@ jobs:
 
       - name: Run Claude auto-fix
         if: steps.limits.outputs.proceed == 'true'
-        uses: anthropics/claude-code-action@0f97b95b6536c26e5f6bd90faec370d41695beca # v1
+        uses: anthropics/claude-code-action@fad22eb3fa582b7357fc0ea48af6645851b884fd # v1
         env:
           API_USERNAME: ${{ secrets.API_USERNAME }}
           API_PASSWORD: ${{ secrets.API_PASSWORD }}
