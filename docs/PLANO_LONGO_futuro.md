@@ -34,6 +34,9 @@ half; the vuln agent is the *dynamic/memory-safety* half of the same story.
   axis — 2,0% (typical half) → 59,8% → 100% → 100% (extreme). **Lift 50,25×**, ranking AUC 0,9151,
   Spearman ρ 0,748. Orthogonality runs the other way too: the IF flags **37,5% of rule-clean** vs only
   **8,9% of rule-flagged** configs. Evidence: `evaluation/results/ml_atypicality/`.
+  **Independently reproduced** on different hardware (16 vs 8 workers, separately mined corpus) with
+  *every* headline metric identical to the digit — the experiment is deterministic, which is exactly the
+  reproducibility bar this project claims elsewhere.
 - The ablation above is **unchanged and still must not be spun as a win**: on the *home* corpus the ML
   compresses the rules' separation. A.3 answers a *different* question — in a population the rules say
   nothing about, the anomaly signal is real, orthogonal and selective. Both statements are true; do not
