@@ -55,13 +55,13 @@
 ### Security Scanner
 - Pattern matching for **11 vulnerability categories**: open ports, hardcoded secrets, unencrypted storage, public S3 buckets, IAM misconfigurations, missing CloudWatch logging, missing VPC flow logs, publicly accessible RDS, unrestricted security-group egress, EC2 instances allowing IMDSv1, and EC2 instances with auto-assigned public IPs
 - Severity classification: `CRITICAL` · `HIGH` · `MEDIUM` · `LOW` · `INFO`
-- Actionable remediation suggestions per finding
+- A remediation suggestion for each finding
 - Configurable severity overrides for organizational policy alignment
 
 ### Machine Learning Engine
 - **Isolation Forest** anomaly detection (unsupervised — no labeled data required)
 - **8-dimensional _structural_ feature vector** extracted directly from the parsed Terraform — _independent of the rule findings_ — so the model reacts to risky infrastructure shapes the fixed rules don't encode: resource count, type diversity, ingress-rule count, public-exposure count, IAM-resource count, encryption coverage, logging-resource count, secret parametrization
-- Trained on **real-world Terraform**, not a synthetic mock-up: model `v20260708_015533` fits 35,594 vectors, of which **35,294 are mined from production code** (Terraform Registry 21,746 + public GitHub 13,548, hash-deduplicated), seeded with 300 synthetic secure-baseline profiles so the secure mode stays centered
+- Trained on **real-world Terraform**: model `v20260708_015533` fits 35,594 vectors, of which **35,294 are mined from production code** (Terraform Registry 21,746 + public GitHub 13,548, hash-deduplicated), seeded with 300 synthetic secure-baseline profiles so the secure mode stays centered
 - Model persistence via Joblib with versioning and drift detection
 - Confidence scoring based on anomaly distance from learned security baselines
 
@@ -489,7 +489,7 @@ Isolation Forest was selected after evaluating alternatives against four practic
 
 1. **Hybrid detection** — Deterministic rules catch known misconfigurations with zero false negatives against their patterns; Isolation Forest adds coverage for deviations the ruleset has not seen. The signals are complementary, not redundant.
 2. **Evolving baseline** — The model refines its security baseline as more configurations are analyzed. Drift detection flags distributional shifts so operators know when a retrain is warranted.
-3. **Explainable scoring** — Every finding ships with its feature vector, rule attribution, and confidence level. Results are auditable, not black-box.
+3. **Explainable scoring** — Every finding ships with its feature vector, rule attribution, and confidence level, so each result can be audited.
 4. **CI-compatible performance** — Sub-second per-file latency makes security gating a viable step in deployment pipelines rather than an offline batch job.
 
 ---
