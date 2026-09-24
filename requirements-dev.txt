@@ -10,12 +10,12 @@ pytest-mock==3.15.1
 pytest-asyncio==1.4.0
 pytest-benchmark==5.3.0
 pytest-timeout==2.4.0
-coverage>=7.15.4
+coverage>=7.16.1
 httpx<0.29
 psutil==7.2.2
 
 # Linting and formatting
-pylint==4.0.7
+pylint==4.0.8
 # 26.3.1 fixes PYSEC-2026-2121 (cache poisoning through --python-cell-magics)
 # and PYSEC-2026-2120 (the GitHub action's use_pyproject option). Safe to move:
 # black gates nothing here — the Quality Gate runs pylint/flake8/bandit/mypy,
@@ -27,7 +27,7 @@ pre-commit==4.6.2
 
 # Type checking
 mypy==2.3.1
-types-PyYAML==6.0.12.20260815
+types-PyYAML==6.0.12.20260906
 types-redis==4.6.0.20241004
 types-aiofiles>=25.1.0.20260518
 
@@ -42,7 +42,7 @@ pip-audit==2.10.1
 # cyclonedx-bom 7.3.1 requires cyclonedx-python-lib[validation]>=8.0, whose
 # cap is `lxml<7`. The `cyclonedx-py requirements` CLI that `make sbom` calls
 # is unchanged — verified generating an 18-component CycloneDX 1.6 document.
-cyclonedx-bom==7.3.1
+cyclonedx-bom==7.4.0
 # Pinned for the same reason as starlette: a transitive security floor should
 # be reproducible, not left to whatever satisfies `lxml<7` on the day.
 lxml==6.1.2
