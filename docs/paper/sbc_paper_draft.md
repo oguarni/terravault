@@ -4,7 +4,7 @@
 
 <sup>1</sup> Universidade Tecnológica Federal do Paraná (UTFPR), Campus Dois Vizinhos — Bacharelado em Engenharia de Software
 
-`TODO(authorship)`: confirm the final author list before submission. Art. 34 of IN COENS-DV/UTFPR nº 7/2023 states the student should *preferentially* be the first author for the paper to convalidate TCC 2; Art. 37 reserves first-author rights to the student for six months after approval (defence: 2026-07-03). Advisor Prof. Newton Carlos Will and co-advisor Prof. Marlon (`TODO(name)`: full surname) are the natural co-authors — their inclusion is a decision for the author, not an editorial default.
+`TODO(authorship)`: confirm the final author list before submission. Art. 34 of IN COENS-DV/UTFPR nº 7/2023 states the student should *preferentially* be the first author for the paper to convalidate TCC 2; Art. 37 reserves first-author rights to the student for six months after approval (defence: 2026-07-03). Advisor Prof. Newton Carlos Will and co-advisor Prof. Marlon Marcon are the natural co-authors — their inclusion is a decision for the author, not an editorial default.
 
 `TODO(format)`: this draft is written in Markdown for review. Before submission it must be typeset in the official SBC article template (`sbc-template` / `sbc-latex`), which fixes the title block, abstract/resumo order, section numbering and reference style.
 

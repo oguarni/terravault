@@ -500,7 +500,7 @@ Isolation Forest was selected after evaluating alternatives against four practic
 - The anomaly signal ranks configurations for **human review** — it is never an automatic gate. Structural atypicality is not evidence of vulnerability
 - The anomaly signal has not been shown to be independent of the rules. The A.3 comparison that suggested it is confounded: the missing-logging rule decides which files count as rule-clean, and the model counts logging resources (erratum in `evaluation/results/ml_atypicality/`)
 - The model is trained on essentially all public Terraform, so evaluation of it is **in-distribution**; there is no meaningful held-out real corpus to be had
-- The `contamination=0.1` threshold is trained-in and not yet calibrated; percentile-based cutoffs on the raw anomaly score are the pending fix
+- The scanner still flags with the trained-in `contamination=0.1` cut. An offline calibration (2026-07-22, `evaluation/results/ml_calibration/`) recommends a cutoff at the 95th percentile of the training scores; it is not wired into the scanner yet, and it was tuned on the rule-clean population the A.3 erratum covers
 - No support for Terraform modules or remote state
 - Vulnerability messages and remediation guidance in English only
 - AWS coverage only; Azure and GCP provider patterns are not yet encoded

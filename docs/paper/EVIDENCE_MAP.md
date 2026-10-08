@@ -209,7 +209,7 @@ These appear in the draft only inside `TODO(cite)` / `TODO(...)` markers and mus
 | §2, prior anomaly detection over IaC / cloud configuration | external citation, or an explicit statement that a documented search found none |
 | §2, canonical citable references for Checkov / tfsec / Terrascan / KICS | project references (repository, technical report or tool paper) |
 | References, Liu et al. (2008) page range and SBC formatting | verification |
-| Title block, co-authors and Prof. Marlon's surname | author decision plus a record on disk |
+| Title block and co-authors (advisor Prof. Newton Carlos Will, co-advisor Prof. Marlon Marcon, per the TCC 2 monograph) | author decision |
 | §6.5, confidence intervals for separations and band flag rates | computation from the committed metrics files |
 | §7, artefact-availability statement (repository URL, commit SHA) | fill in at submission time |
 | README-inherited "Gartner (2024)" and "IBM Security (2024)" references | **do not reuse without verifying the primary source**; the first appears misattributed |
