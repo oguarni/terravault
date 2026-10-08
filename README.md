@@ -487,7 +487,7 @@ Isolation Forest was selected after evaluating alternatives against four practic
 
 ### Design Rationale
 
-1. **Hybrid detection** — Deterministic rules catch known misconfigurations with zero false negatives against their patterns; Isolation Forest adds coverage for deviations the ruleset has not seen. The signals are complementary, not redundant.
+1. **Hybrid detection** — Deterministic rules catch known misconfigurations with zero false negatives against their patterns; Isolation Forest scores how far a file's structure sits from public Terraform, which the rules do not look at. That this adds a signal independent of the rules is a design hypothesis the evaluation has not confirmed (see Limitations).
 2. **Evolving baseline** — The model refines its security baseline as more configurations are analyzed. Drift detection flags distributional shifts so operators know when a retrain is warranted.
 3. **Explainable scoring** — Every finding ships with its feature vector, rule attribution, and confidence level, so each result can be audited.
 4. **CI-compatible performance** — Sub-second per-file latency makes security gating a viable step in deployment pipelines rather than an offline batch job.
@@ -498,6 +498,7 @@ Isolation Forest was selected after evaluating alternatives against four practic
 
 ### Current Limitations
 - The anomaly signal ranks configurations for **human review** — it is never an automatic gate. Structural atypicality is not evidence of vulnerability
+- The anomaly signal has not been shown to be independent of the rules. The A.3 comparison that suggested it is confounded: the missing-logging rule decides which files count as rule-clean, and the model counts logging resources (erratum in `evaluation/results/ml_atypicality/`)
 - The model is trained on essentially all public Terraform, so evaluation of it is **in-distribution**; there is no meaningful held-out real corpus to be had
 - The `contamination=0.1` threshold is trained-in and not yet calibrated; percentile-based cutoffs on the raw anomaly score are the pending fix
 - No support for Terraform modules or remote state

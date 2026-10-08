@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from evaluation.report import _md_table, _pct
+from evaluation.report_ml_atypicality import RETRACTION_NOTE
 
 # An operating point that loses more than half of the structurally extreme decile
 # has stopped ranking that tail at all; keeping >= 50% of it is the constraint,
@@ -147,6 +148,7 @@ def build_markdown(d: dict, sources: Dict[str, str]) -> str:
       f"`ml_calibration_metrics.json` (modelo `{meta.get('model_version','?')}`, "
       f"{meta.get('training_vectors','?')} vetores de treino; o modelo **não** foi "
       "retreinado — apenas o corte sobre o escore foi calibrado).*\n")
+    A(RETRACTION_NOTE)
 
     A("## 1. O problema que a A.3 deixou aberto\n")
     A("A A.3 mostrou que o escore contínuo do Isolation Forest **ordena** bem as "

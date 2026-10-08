@@ -2,6 +2,8 @@
 
 *Gerado por `evaluation/report_ml_calibration.py` a partir de `ml_calibration_metrics.json` (modelo `v20260708_015533`, 35594 vetores de treino; o modelo **não** foi retreinado — apenas o corte sobre o escore foi calibrado).*
 
+> **Errata (2026-10-07).** A conclusão de que o sinal do Isolation Forest é independente das regras não se sustenta. A população *rule-clean* é selecionada pela regra de ausência de logging: todos os arquivos *rule-clean* declaram CloudTrail ou um log group do CloudWatch, e 99,6% dos *rule-flagged* não declaram nenhum recurso de logging, enquanto `logging_resource_count` é uma das 8 variáveis do modelo. Entre arquivos com recurso de logging, os *rule-flagged* são sinalizados com mais frequência (47/67, 70,1%) que os *rule-clean* (164/437, 37,5%), e o segundo corpus repete o padrão (73,8% contra 38,8%). A AUC também é em parte circular, porque Mahalanobis e IF medem distância à distribuição de treino. Os números abaixo continuam reprodutíveis; a leitura de ortogonalidade e o veredito não valem. A reanálise roda localmente sobre `evaluation/results/ml_calibration/per_config_scores.csv.gz`.
+
 ## 1. O problema que a A.3 deixou aberto
 
 A A.3 mostrou que o escore contínuo do Isolation Forest **ordena** bem as configurações *rule-clean* pelo eixo independente de atipicidade (Mahalanobis). O que ela também mostrou é que o **corte** herdado do treino (`contamination=0.1`) dispara em 37.5% da população *rule-clean* — alto demais para uma fila de revisão. Como a ordenação é boa e só o corte é ruim, a correção é um **corte percentílico sobre o escore bruto**, não o booleano `predict == -1`.

@@ -24,6 +24,25 @@ from evaluation.report import _md_table, _pct
 
 _CONTAMINATION = 0.10  # the model's trained anomaly fraction (ml_model.py)
 
+# Rendered under the title of this report and of the calibration report, so a
+# regenerated copy keeps the retraction. Figures come from the committed
+# ml_calibration/per_config_scores.csv.gz, stratified by logging_resource_count.
+RETRACTION_NOTE = (
+    "> **Errata (2026-10-07).** A conclusão de que o sinal do Isolation Forest é "
+    "independente das regras não se sustenta. A população *rule-clean* é "
+    "selecionada pela regra de ausência de logging: todos os arquivos "
+    "*rule-clean* declaram CloudTrail ou um log group do CloudWatch, e 99,6% dos "
+    "*rule-flagged* não declaram nenhum recurso de logging, enquanto "
+    "`logging_resource_count` é uma das 8 variáveis do modelo. Entre arquivos com "
+    "recurso de logging, os *rule-flagged* são sinalizados com mais frequência "
+    "(47/67, 70,1%) que os *rule-clean* (164/437, 37,5%), e o segundo corpus "
+    "repete o padrão (73,8% contra 38,8%). A AUC também é em parte circular, "
+    "porque Mahalanobis e IF medem distância à distribuição de treino. Os números "
+    "abaixo continuam reprodutíveis; a leitura de ortogonalidade e o veredito não "
+    "valem. A reanálise roda localmente sobre "
+    "`evaluation/results/ml_calibration/per_config_scores.csv.gz`.\n"
+)
+
 
 def _basename(path: str) -> str:
     """Two trailing path segments — enough to identify the module/file."""
@@ -136,6 +155,7 @@ def build_markdown(d: dict) -> str:
     A(f"*Gerado por `evaluation/report_ml_atypicality.py` a partir de "
       f"`ml_atypicality_metrics.json` (modelo `{meta.get('model_version','?')}`, "
       f"{meta.get('training_vectors','?')} vetores de treino).*\n")
+    A(RETRACTION_NOTE)
 
     A("## 1. A pergunta\n")
     A("A ablação honesta do manuscrito mostra que, no corpus caseiro, o componente "

@@ -8,6 +8,8 @@
 
 `TODO(format)`: this draft is written in Markdown for review. Before submission it must be typeset in the official SBC article template (`sbc-template` / `sbc-latex`), which fixes the title block, abstract/resumo order, section numbering and reference style.
 
+`STATUS (2026-10-07)`: the rule-clean half of C3 is retracted, and every passage that rests on it (the abstract and resumo from "That is not reversed", C3's second half, §4.4, §5.4, §5.5 item 2, §6.3(b), the conclusion and future-work item (ii)) is wrong as written. Rule-clean files are selected by the missing-logging rule, so all of them declare a logging resource while 99.6% of rule-flagged files declare none, and `logging_resource_count` is one of the model's eight features. Among files that do declare logging, the model flags rule-flagged files more often (70.1%) than rule-clean ones (37.5%). Do not submit or quote this draft until that analysis is redone; the erratum in `evaluation/results/ml_atypicality/report_ml_atypicality.md` has the figures. C1, C2 and the ablation itself are unaffected.
+
 ---
 
 ## Abstract
