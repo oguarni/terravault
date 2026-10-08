@@ -60,8 +60,8 @@
 
 ### Machine Learning Engine
 - **Isolation Forest** anomaly detection (unsupervised — no labeled data required)
-- **8-dimensional _structural_ feature vector** extracted directly from the parsed Terraform — _independent of the rule findings_ — so the model reacts to risky infrastructure shapes the fixed rules don't encode: resource count, type diversity, ingress-rule count, public-exposure count, IAM-resource count, encryption coverage, logging-resource count, secret parametrization
-- Trained on **real-world Terraform**: model `v20260708_015533` fits 35,594 vectors, of which **35,294 are mined from production code** (Terraform Registry 21,746 + public GitHub 13,548, hash-deduplicated), seeded with 300 synthetic secure-baseline profiles so the secure mode stays centered
+- **8-dimensional _structural_ feature vector** computed directly from the parsed Terraform rather than from the rule findings: resource count, type diversity, ingress-rule count, public-exposure count, IAM-resource count, encryption coverage, logging-resource count, secret parametrization. Several of these measure what the rules also check (logging, public exposure, encryption, secrets), and the model scores how unusual a file's structure is, which does not by itself make it risky
+- Trained on **real-world Terraform**: model `v20260708_015533` fits 35,594 vectors, of which **35,294 are mined from public `.tf` files** (Terraform Registry 21,746 + public GitHub 13,548, hash-deduplicated), seeded with 300 synthetic secure-baseline profiles so the secure mode stays centered
 - Model persistence via Joblib with versioning and drift detection
 - Confidence scoring based on anomaly distance from learned security baselines
 
