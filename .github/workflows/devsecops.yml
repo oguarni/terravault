@@ -136,9 +136,17 @@ jobs:
         FAIL=0
         if [ "$BANDIT_EXIT"    != "0" ]; then echo "::error::Bandit findings detected";    FAIL=1; fi
         if [ "$PIP_AUDIT_EXIT" != "0" ]; then echo "::error::pip-audit findings detected"; FAIL=1; fi
-        # gitleaks --exit-code 0 always exits 0; detect findings from SARIF
-        if [ -f gitleaks-results.sarif ]; then
+        # gitleaks runs with --exit-code 0, so findings come only from the SARIF
+        # report and a non-zero exit means the scan itself failed. A crash, a
+        # missing report, or a config that loads no rules must fail the gate:
+        # passing unscanned is the silent no-op 4341219 fixed for an empty ruleset.
+        if [ "$GITLEAKS_EXIT" != "0" ]; then echo "::error::gitleaks did not complete (exit '$GITLEAKS_EXIT')"; FAIL=1; fi
+        if [ ! -f gitleaks-results.sarif ]; then
+          echo "::error::gitleaks produced no SARIF report"; FAIL=1
+        else
+          RULES=$(python -c "import json,sys; d=json.load(open('gitleaks-results.sarif')); print(sum(len(r.get('tool',{}).get('driver',{}).get('rules',[])) for r in d.get('runs',[])))")
           FOUND=$(python -c "import json,sys; d=json.load(open('gitleaks-results.sarif')); print(sum(len(r.get('results',[])) for r in d.get('runs',[])))")
+          if [ "$RULES" -eq 0 ]; then echo "::error::gitleaks loaded no detection rules; check .gitleaks.toml"; FAIL=1; fi
           if [ "$FOUND" -gt 0 ]; then echo "::error::gitleaks: $FOUND secret(s) detected"; FAIL=1; fi
         fi
         exit $FAIL
