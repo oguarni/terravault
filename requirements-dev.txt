@@ -45,4 +45,4 @@ pip-audit==2.10.1
 cyclonedx-bom==7.3.1
 # Pinned for the same reason as starlette: a transitive security floor should
 # be reproducible, not left to whatever satisfies `lxml<7` on the day.
-lxml==6.1.2
+lxml==6.1.3
