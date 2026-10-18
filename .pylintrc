@@ -1,6 +1,6 @@
 [MAIN]
-# Python 3.10+ as per project requirements.
-py-version = 3.10
+# Python 3.12+ as per project requirements.
+py-version = 3.12
 ignore-patterns = ^\.venv$
 # Match the project's flake8 config (see CLAUDE.md): 120-char lines.
 max-line-length = 120

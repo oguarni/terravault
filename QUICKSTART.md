@@ -9,7 +9,7 @@ For CLI-only usage with no infrastructure dependencies, see the [README Quick St
 ## Prerequisites
 
 - Docker and Docker Compose installed
-- Python 3.10+ installed
+- Python 3.12+ installed
 - ~2GB free disk space
 
 ---

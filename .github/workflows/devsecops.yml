@@ -49,7 +49,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v7
       with:
-        python-version: '3.10'
+        python-version: '3.12'
 
     - name: Verify TerraVault scan constraints are current
       run: |
@@ -162,7 +162,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v7
       with:
-        python-version: '3.10'
+        python-version: '3.12'
 
     - name: Cache dependencies
       uses: actions/cache@v6
@@ -327,7 +327,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: '3.10'
+          python-version: '3.12'
 
       - name: Download all artifacts
         uses: actions/download-artifact@v8
@@ -346,7 +346,7 @@ jobs:
       #   terravault-scan / terravault-sarif — scanned against test_files/,
       #     which is a deliberately vulnerable fixture set (vulnerable.tf
       #     scores 84 against a threshold of 70 on purpose).
-      #   trivy-sarif — python:3.10-slim base-image CVEs. trivy-action does not
+      #   trivy-sarif — python:3.12-slim base-image CVEs. trivy-action does not
       #     fail the docker job either; its enforcement surface is the GitHub
       #     Security tab upload, which this flag does not touch.
       - name: Generate consolidated report
@@ -488,7 +488,7 @@ jobs:
         if: steps.limits.outputs.proceed == 'true'
         uses: actions/setup-python@v7
         with:
-          python-version: '3.10'
+          python-version: '3.12'
 
       - name: Install dependencies
         if: steps.limits.outputs.proceed == 'true'
@@ -689,7 +689,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: '3.10'
+          python-version: '3.12'
           cache: pip
           cache-dependency-path: |
             requirements.txt
