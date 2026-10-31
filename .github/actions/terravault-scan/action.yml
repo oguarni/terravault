@@ -50,14 +50,16 @@ runs:
     - name: Setup Python
       uses: actions/setup-python@v7
       with:
-        python-version: "3.10"
+        python-version: "3.12"
 
     - name: Install dependencies
       shell: bash
       run: |
         ACTION_REQUIREMENTS="${{ github.action_path }}/requirements.txt"
         ACTION_PATH="${{ github.action_path }}"
-        pip install -r "$ACTION_REQUIREMENTS" -c "$ACTION_PATH/constraints.txt"
+        CONSTRAINTS="$RUNNER_TEMP/terravault-scan-constraints.txt"
+        python "$ACTION_PATH/generate-constraints.py" "$CONSTRAINTS"
+        pip install -r "$ACTION_REQUIREMENTS" -c "$CONSTRAINTS"
 
     - name: Initialize ML model
       shell: bash

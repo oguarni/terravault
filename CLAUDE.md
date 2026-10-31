@@ -6,7 +6,7 @@ TerraVault is a hybrid Terraform security scanner implementing Clean Architectur
 - **Architecture**: Clean Architecture layers (domain → application → infrastructure)
 - **Security Approach**: 60% rule-based detection (11 rules) + 40% ML anomaly detection (8-dim *structural* feature vector, independent of the rule findings)
 - **Tech Stack**: FastAPI, PostgreSQL, Redis, Isolation Forest ML, Prometheus/Grafana
-- **Language**: Python 3.10+
+- **Language**: Python 3.12+
 - **Health**: focused test suite (195 pytest cases, 82.63% line / 73.28% branch coverage) on security rules, scan pipeline, API contract, repositories, rate limiting, ML predictions, and the CI report tooling; Pylint 10.00/10, 0 Flake8 issues, 0 Bandit findings, 0 mypy errors
 - **Dependencies**: `pip-audit` clean (0 advisories) across `requirements.txt` and `requirements-dev.txt` — see *Dependency advisories* below for what was fixed and why the pins look the way they do
 
@@ -270,7 +270,7 @@ its own prompt calls no-fix zones.
 | Kind | Why it always reports |
 |---|---|
 | `terravault-scan`, `terravault-sarif` | scanned against `test_files/`, a deliberately vulnerable fixture set |
-| `trivy-sarif` | `python:3.10-slim` base-image CVEs; enforcement lives in the Security-tab SARIF upload, which this does not touch |
+| `trivy-sarif` | `python:3.12-slim` base-image CVEs; enforcement lives in the Security-tab SARIF upload, which this does not touch |
 
 Do not add a kind to this list to make a red pipeline green — that is the one
 thing the flag must never be used for. It is for inputs whose findings are

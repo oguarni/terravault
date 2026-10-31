@@ -1,10 +1,10 @@
-FROM python:3.10-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
 # System dependencies first (changes rarely, better layer caching).
 #
-# The `upgrade` matters as much as the `install`. python:3.10-slim is rebuilt on
+# The `upgrade` matters as much as the `install`. python:3.12-slim is rebuilt on
 # its own cadence, so between base-image tags its Debian packages drift behind
 # the security archive. The Trivy step below gates on fixable CVEs only, and
 # that is precisely what this drift produces: the gate reported 3 HIGH findings
@@ -12,14 +12,14 @@ WORKDIR /app
 # libssl3t64 CVE-2026-14456 (OpenSSL, denial of service via unbounded memory)
 # where 3.5.6-1~deb13u2 was installed and 3.5.7-1~deb13u2 was already published.
 # Taking the archive's fixes at build time is the fix; waiting for the next
-# python:3.10-slim tag is not.
+# python:3.12-slim tag is not.
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Upgrade the build tooling the base image bakes in, before anything uses it.
-# python:3.10-slim ships pip 23.0.1 and a setuptools old enough that its
+# The 3.10 base image shipped pip 23.0.1 and a setuptools old enough that its
 # _vendor/ tree carried jaraco.context 5.3.0 (CVE-2026-23949, path traversal)
 # and wheel 0.45.1 (CVE-2026-24049, privilege escalation / arbitrary code).
 # Both were flagged by the Trivy gate against the built image, and neither is
