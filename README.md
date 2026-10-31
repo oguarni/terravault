@@ -288,6 +288,10 @@ response = requests.post(
 print(response.json())
 ```
 
+### Postman Collection
+
+[`postman/`](postman/README.md) holds a Postman collection that checks `/health`, `/openapi.json` and `/scan` over HTTP: status codes, JSON Schemas for the health, scan and error bodies, API-key rejection and upload validation. CI runs it with Newman against a live API process (`.github/workflows/api-collection.yml`).
+
 ### Response Format
 
 ```json
