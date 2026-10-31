@@ -1,0 +1,514 @@
+{
+  "info": {
+    "name": "TerraVault API",
+    "description": "Functional and schema checks for the TerraVault REST API: health, the published OpenAPI document, API-key authentication, scan results and upload validation.\n\nThe JSON Schemas are written from the API's observed responses, because the FastAPI handlers declare no response models. Assertions avoid the ML score, which depends on the trained model, and check the deterministic rule results instead.\n\nRun it with Newman from the repository root; see postman/README.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "maxResponseMs",
+      "value": "5000"
+    },
+    {
+      "key": "errorSchema",
+      "value": "{\"type\": \"object\", \"required\": [\"detail\"], \"properties\": {\"detail\": {\"type\": \"string\", \"minLength\": 1}}}"
+    },
+    {
+      "key": "healthSchema",
+      "value": "{\"type\": \"object\", \"required\": [\"status\", \"service\", \"version\", \"rate_limiting\", \"metrics\", \"database\"], \"properties\": {\"status\": {\"const\": \"healthy\"}, \"service\": {\"const\": \"TerraVault\"}, \"version\": {\"type\": \"string\"}, \"rate_limiting\": {\"type\": \"object\", \"required\": [\"enabled\", \"using_redis\", \"using_fallback\"], \"properties\": {\"enabled\": {\"type\": \"boolean\"}, \"using_redis\": {\"type\": \"boolean\"}, \"using_fallback\": {\"type\": \"boolean\"}}}, \"metrics\": {\"type\": \"boolean\"}, \"database\": {\"type\": \"object\", \"required\": [\"connected\", \"healthy\"], \"properties\": {\"connected\": {\"type\": \"boolean\"}, \"healthy\": {\"type\": [\"boolean\", \"null\"]}}}}}"
+    },
+    {
+      "key": "scanSchema",
+      "value": "{\"type\": \"object\", \"required\": [\"file\", \"score\", \"rule_based_score\", \"ml_score\", \"confidence\", \"vulnerabilities\", \"summary\", \"features_analyzed\", \"performance\"], \"properties\": {\"file\": {\"type\": \"string\"}, \"score\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 100}, \"rule_based_score\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 100}, \"ml_score\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 100}, \"confidence\": {\"enum\": [\"HIGH\", \"MEDIUM\", \"LOW\"]}, \"vulnerabilities\": {\"type\": \"array\", \"items\": {\"type\": \"object\", \"required\": [\"severity\", \"points\", \"message\", \"resource\", \"remediation\"], \"properties\": {\"severity\": {\"enum\": [\"CRITICAL\", \"HIGH\", \"MEDIUM\", \"LOW\", \"INFO\"]}, \"points\": {\"type\": \"number\", \"minimum\": 0}, \"message\": {\"type\": \"string\", \"minLength\": 1}, \"resource\": {\"type\": \"string\"}, \"remediation\": {\"type\": \"string\"}}}}, \"summary\": {\"type\": \"object\", \"required\": [\"critical\", \"high\", \"medium\", \"low\", \"info\"], \"properties\": {\"critical\": {\"type\": \"integer\", \"minimum\": 0}, \"high\": {\"type\": \"integer\", \"minimum\": 0}, \"medium\": {\"type\": \"integer\", \"minimum\": 0}, \"low\": {\"type\": \"integer\", \"minimum\": 0}, \"info\": {\"type\": \"integer\", \"minimum\": 0}}}, \"features_analyzed\": {\"type\": \"object\", \"required\": [\"resource_count\", \"resource_type_diversity\", \"ingress_rule_count\", \"public_exposure_count\", \"iam_resource_count\", \"encryption_coverage\", \"logging_resource_count\", \"secret_parametrization\"], \"properties\": {\"resource_count\": {\"type\": \"number\"}, \"resource_type_diversity\": {\"type\": \"number\"}, \"ingress_rule_count\": {\"type\": \"number\"}, \"public_exposure_count\": {\"type\": \"number\"}, \"iam_resource_count\": {\"type\": \"number\"}, \"encryption_coverage\": {\"type\": \"number\"}, \"logging_resource_count\": {\"type\": \"number\"}, \"secret_parametrization\": {\"type\": \"number\"}}}, \"performance\": {\"type\": \"object\", \"required\": [\"scan_time_seconds\", \"file_size_kb\", \"from_cache\"], \"properties\": {\"scan_time_seconds\": {\"type\": \"number\", \"minimum\": 0}, \"file_size_kb\": {\"type\": \"number\", \"minimum\": 0}, \"from_cache\": {\"type\": \"boolean\"}}}}}"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Tag every request so a failure can be matched to the server log line.",
+          "pm.request.headers.upsert({ key: 'X-Correlation-ID', value: 'newman-' + pm.info.requestId });"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('[common] responds with JSON', function () {",
+          "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+          "});",
+          "pm.test('[common] echoes the correlation ID', function () {",
+          "    pm.expect(pm.response.headers.get('X-Correlation-ID')).to.eql('newman-' + pm.info.requestId);",
+          "});",
+          "pm.test('[common] answers within the smoke latency budget', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(Number(pm.variables.get('maxResponseMs')));",
+          "});"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Service",
+      "item": [
+        {
+          "name": "Health check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('body matches the health schema', function () {",
+                  "    pm.response.to.have.jsonSchema(JSON.parse(pm.collectionVariables.get('healthSchema')));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "OpenAPI document lists the endpoints",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const spec = pm.response.json();",
+                  "pm.test('is an OpenAPI 3 document', function () {",
+                  "    pm.expect(spec.openapi).to.match(/^3\\./);",
+                  "});",
+                  "pm.test('publishes GET /health and POST /scan', function () {",
+                  "    pm.expect(spec.paths).to.have.nested.property('/health.get');",
+                  "    pm.expect(spec.paths).to.have.nested.property('/scan.post');",
+                  "});",
+                  "pm.test('POST /scan takes a multipart file upload', function () {",
+                  "    pm.expect(spec.paths['/scan'].post.requestBody.content).to.have.property('multipart/form-data');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "description": "Served only when docs are enabled (development, or TERRAVAULT_ENABLE_DOCS=true).",
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/openapi.json",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "openapi.json"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Scan without an API key is rejected",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test('error body matches the error schema', function () {",
+                  "    pm.response.to.have.jsonSchema(JSON.parse(pm.collectionVariables.get('errorSchema')));",
+                  "});",
+                  "pm.test('detail explains the rejection', function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"Missing API Key\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "description": "No X-API-Key header.",
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "test_files/vulnerable.tf"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "scan"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Scan with an invalid API key is rejected",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test('error body matches the error schema', function () {",
+                  "    pm.response.to.have.jsonSchema(JSON.parse(pm.collectionVariables.get('errorSchema')));",
+                  "});",
+                  "pm.test('detail explains the rejection', function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"Invalid API Key\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "description": "A key that does not match the configured bcrypt hash.",
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "not-a-valid-key",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "test_files/vulnerable.tf"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "scan"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Scan",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Fail fast with a clear message instead of a confusing 403 when the key was not supplied.",
+              "if (!pm.variables.get('apiKey')) {",
+              "    throw new Error('apiKey is not set: pass --env-var apiKey=<key> to Newman or set it in the environment.');",
+              "}"
+            ]
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "Scan a vulnerable configuration",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('scan result matches the scan schema', function () {",
+                  "    pm.response.to.have.jsonSchema(JSON.parse(pm.collectionVariables.get('scanSchema')));",
+                  "});",
+                  "pm.test('summary counts agree with the findings list', function () {",
+                  "    ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'].forEach(function (severity) {",
+                  "        const listed = body.vulnerabilities.filter(function (v) { return v.severity === severity; }).length;",
+                  "        pm.expect(body.summary[severity.toLowerCase()], severity).to.eql(listed);",
+                  "    });",
+                  "});",
+                  "pm.test('the rules report findings, including a CRITICAL one', function () {",
+                  "    pm.expect(body.vulnerabilities).to.not.be.empty;",
+                  "    pm.expect(body.summary.critical).to.be.above(0);",
+                  "});",
+                  "pm.test('the rule-based score reaches the default CI threshold (70)', function () {",
+                  "    pm.expect(body.rule_based_score).to.be.at.least(70);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "description": "Deliberately vulnerable fixture shared with the DevSecOps smoke test.",
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "test_files/vulnerable.tf"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "scan"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Scan a hardened configuration",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('scan result matches the scan schema', function () {",
+                  "    pm.response.to.have.jsonSchema(JSON.parse(pm.collectionVariables.get('scanSchema')));",
+                  "});",
+                  "pm.test('summary counts agree with the findings list', function () {",
+                  "    ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'].forEach(function (severity) {",
+                  "        const listed = body.vulnerabilities.filter(function (v) { return v.severity === severity; }).length;",
+                  "        pm.expect(body.summary[severity.toLowerCase()], severity).to.eql(listed);",
+                  "    });",
+                  "});",
+                  "pm.test('the rules report no findings', function () {",
+                  "    pm.expect(body.vulnerabilities).to.be.empty;",
+                  "    pm.expect(body.rule_based_score).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "description": "Hardened fixture: the deterministic rules must find nothing.",
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "test_files/secure.tf"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "scan"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Upload validation",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Fail fast with a clear message instead of a confusing 403 when the key was not supplied.",
+              "if (!pm.variables.get('apiKey')) {",
+              "    throw new Error('apiKey is not set: pass --env-var apiKey=<key> to Newman or set it in the environment.');",
+              "}"
+            ]
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "Reject a file that is not Terraform",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('error body matches the error schema', function () {",
+                  "    pm.response.to.have.jsonSchema(JSON.parse(pm.collectionVariables.get('errorSchema')));",
+                  "});",
+                  "pm.test('detail explains the rejection', function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"Terraform file\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "description": "Only .tf and .tf.json uploads are accepted.",
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "postman/fixtures/not-terraform.txt"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "scan"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reject an empty Terraform file",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('error body matches the error schema', function () {",
+                  "    pm.response.to.have.jsonSchema(JSON.parse(pm.collectionVariables.get('errorSchema')));",
+                  "});",
+                  "pm.test('detail explains the rejection', function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"empty\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "description": "A zero-byte upload.",
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "postman/fixtures/empty.tf"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "scan"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
