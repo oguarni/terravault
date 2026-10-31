@@ -184,7 +184,7 @@ class HCLParser:
         except (OSError, FileNotFoundError) as e:
             # If stat fails, the file might be mocked in tests or truly missing
             # Let the subsequent open() call handle it
-            logger.debug("Could not stat file %s: %s", path, e)
+            logger.debug("Could not stat the input file: %s", type(e).__name__)
             return
 
         if file_size > self.max_file_size_bytes:
@@ -239,14 +239,14 @@ class HCLParser:
         # Note: Timeout is handled at the API level via asyncio.wait_for
         try:
             tf_content = loads_canonical(raw_content)
-            logger.debug("Successfully parsed HCL file: %s", filepath)
+            logger.debug("Parsed the input as HCL")
             return tf_content, raw_content
         except Exception as hcl_error:  # pylint: disable=broad-exception-caught
             logger.debug("HCL2 parse failed; trying JSON")
             # Fallback to JSON parsing for .tf.json files
             try:
                 tf_content = json.loads(raw_content)
-                logger.debug("Successfully parsed JSON file: %s", filepath)
+                logger.debug("Parsed the input as JSON")
                 return tf_content, raw_content
             except json.JSONDecodeError:
                 raise TerraformParseError(
