@@ -5,6 +5,8 @@ Happy-path scan behaviour is exercised end-to-end via the FastAPI client in
 the pipeline before rule analysis and ML prediction run.
 """
 from unittest.mock import Mock
+import json
+import logging
 
 import pytest
 
@@ -16,6 +18,7 @@ from terravault.domain.models import Severity, Vulnerability
 from terravault.domain.security_rules import SecurityRuleEngine
 from terravault.infrastructure.ml_model import MLPredictor
 from terravault.infrastructure.parser import HCLParser
+from terravault.sarif_formatter import results_to_sarif
 
 
 pytestmark = pytest.mark.unit
@@ -112,6 +115,50 @@ def test_custom_weights_change_final_score(tmp_path, mock_rule_analyzer, mock_ml
     # rule_score = 30 (single critical), ml_score = 80 (mocked)
     assert rules_only.scan(str(tf_file))["score"] == 30
     assert hybrid.scan(str(tf_file))["score"] == int(0.6 * 30 + 0.4 * 80)
+
+
+def test_display_name_preserves_cache_and_default_sarif_paths(tmp_path, scanner, mock_rule_analyzer,
+                                                            mock_ml_predictor, caplog):
+    tf_file = tmp_path / 'main.tf'
+    tf_file.write_text('resource "aws_s3_bucket" "b" { bucket = "demo" }')
+    mock_rule_analyzer.analyze.return_value = [
+        Vulnerability(Severity.HIGH, 20, 'Test finding', 'b', 'Fix finding'),
+    ]
+    mock_ml_predictor.predict_risk.return_value = (20.0, 'HIGH')
+    caplog.set_level(logging.INFO, logger='terravault.application.scanner')
+
+    first = scanner.scan(str(tf_file), display_name='upload.tf')
+    cached = scanner.scan(str(tf_file), display_name='renamed.tf')
+    assert first['file'] == 'upload.tf'
+    assert cached['file'] == 'renamed.tf'
+    assert cached['performance']['from_cache'] is True
+    assert all(str(tf_file) not in record.getMessage() for record in caplog.records)
+
+    default = scanner.scan(str(tf_file))
+    assert default['file'] == str(tf_file)
+    sarif_run = json.loads(results_to_sarif([default]))['runs'][0]
+    assert sarif_run['artifacts'][0]['location']['uri'] == str(tf_file)
+    assert sarif_run['results'][0]['locations'][0]['physicalLocation']['artifactLocation']['uri'] == str(tf_file)
+
+
+@pytest.mark.parametrize('error_class', [PermissionError, RuntimeError])
+def test_scanner_errors_do_not_log_exception_content(tmp_path, scanner, monkeypatch, caplog, error_class):
+    tf_file = tmp_path / 'main.tf'
+    tf_file.write_text('resource "aws_s3_bucket" "b" {}')
+    canary = 'CANARY_SECRET_9f3b2c'
+
+    def fail_parse(filepath):
+        raise error_class(canary)
+
+    monkeypatch.setattr(scanner.parser, 'parse', fail_parse)
+    caplog.set_level(logging.DEBUG, logger='terravault')
+    result = scanner.scan(str(tf_file), display_name='upload.tf')
+
+    assert result['score'] == -1
+    assert result['file'] == 'upload.tf'
+    assert canary not in result['error']
+    assert all(canary not in record.getMessage() for record in caplog.records)
+    assert all(not record.exc_info and not record.exc_text for record in caplog.records)
 
 
 def test_settings_accept_valid_custom_weights():

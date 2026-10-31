@@ -15,15 +15,27 @@ httpx<0.29
 psutil==7.2.2
 
 # Linting and formatting
-pylint==4.0.7
+# 4.0.9 fixes CVE-2026-114608 (GHSA-22qq-2fwx-7p67: code execution through a
+# pickled stats cache in PYLINT_HOME). 4.0.10 is the last 4.0.x patch; staying
+# on the 4.0 line keeps the checker set the 10.00/10 floor was measured with.
+pylint==4.0.10
 # 26.3.1 fixes PYSEC-2026-2121 (cache poisoning through --python-cell-magics)
-# and PYSEC-2026-2120 (the GitHub action's use_pyproject option). Safe to move:
-# black gates nothing here — the Quality Gate runs pylint/flake8/bandit/mypy,
-# and `black --check` already reported 43 files needing reformatting under the
-# old pin, so the tree was never black-clean to begin with.
-black==26.5.1
+# and PYSEC-2026-2120 (the GitHub action's use_pyproject option); 26.10.1 fixes
+# CVE-2026-114134 (GHSA-cg8m-r9f2-5wm2: the action installs an unvalidated
+# required-version from pyproject.toml). Safe to move: black gates nothing
+# here — the Quality Gate runs pylint/flake8/bandit/mypy, and `black --check`
+# already reported 43 files needing reformatting under the old pin, so the
+# tree was never black-clean to begin with.
+black==26.10.1
 flake8==7.3.0
 pre-commit==4.6.2
+# Transitive (pre-commit -> virtualenv, python-discovery). 4.2.1 fixes 17
+# advisories (CVE-2026-112906 to -112941), one of which, GHSA-69hj-f68j-2879,
+# affects every earlier release, so no older version is a way out. 4.2.x
+# requires Python >= 3.11, which is why the fix needs the 3.12 runtime: on
+# 3.10 the resolver stops at 4.1.0. Pinned like lxml below, so the security
+# floor is reproducible rather than whatever resolves on the day.
+filelock==4.2.5
 
 # Type checking
 mypy==2.3.1

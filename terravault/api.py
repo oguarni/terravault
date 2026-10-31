@@ -4,6 +4,7 @@ import os
 import tempfile
 import asyncio
 import hashlib
+import traceback
 from pathlib import Path
 from typing import Dict, Any
 from contextlib import asynccontextmanager
@@ -344,9 +345,11 @@ async def scan_terraform(
         HTTPException: 400 if file format invalid, 422 if scan fails
     """
 
+    upload_name = sanitize_filename(file.filename or '') or 'upload.tf'
+
     # Validate file extension
     if not file.filename or not file.filename.endswith(('.tf', '.tf.json')):
-        logger.warning("Invalid file extension: %s", sanitize_filename(file.filename or ''))
+        logger.warning("Invalid file extension: %s", upload_name)
         raise HTTPException(
             status_code=400,
             detail="File must be a Terraform file (.tf or .tf.json)"
@@ -372,7 +375,7 @@ async def scan_terraform(
 
     # Validate file content is not empty
     if len(content) == 0:
-        logger.warning("Empty file uploaded: %s", sanitize_filename(file.filename or ''))
+        logger.warning("Empty file uploaded: %s", upload_name)
         raise HTTPException(
             status_code=400,
             detail="File is empty"
@@ -393,13 +396,13 @@ async def scan_terraform(
         loop = asyncio.get_running_loop()
         try:
             results = await asyncio.wait_for(
-                loop.run_in_executor(None, scanner.scan, tmp_path),
+                loop.run_in_executor(None, scanner.scan, tmp_path, upload_name),
                 timeout=settings.scan_timeout_seconds
             )
         except asyncio.TimeoutError as timeout_exc:
             logger.error(
                 "Scan timeout for file '%s' after %ss",
-                sanitize_filename(file.filename or ''), settings.scan_timeout_seconds
+                upload_name, settings.scan_timeout_seconds
             )
             raise HTTPException(
                 status_code=504,
@@ -407,18 +410,23 @@ async def scan_terraform(
             ) from timeout_exc
 
         if results['score'] == -1:
+            failure_message = {
+                'TerraformParseError': 'Terraform parse error: the file is not valid HCL or JSON',
+                'FileNotFoundError': 'Scan failed: the uploaded file is unavailable',
+                'PermissionError': 'Scan failed: the uploaded file could not be accessed',
+            }.get(results.get('error_type') or '', 'Terraform scan failed')
             logger.error(
                 "Scan failed for file '%s': %s",
-                sanitize_filename(file.filename or ''), results.get('error')
+                upload_name, failure_message
             )
             raise HTTPException(
                 status_code=422,
-                detail=results.get('error', 'Terraform scan failed')
+                detail=failure_message
             )
 
         logger.info(
             "Successfully scanned file '%s' - Score: %s/100",
-            sanitize_filename(file.filename or ''), results['score']
+            upload_name, results['score']
         )
 
         # Save scan results to database if available
@@ -450,17 +458,21 @@ async def scan_terraform(
                         correlation_id=correlation_id_value,
                         environment=settings.environment
                     )
-                    logger.debug("Scan results saved to database for file '%s'", file.filename)
+                    logger.debug("Scan results saved to database for file '%s'", upload_name)
             except Exception as db_error:  # pylint: disable=broad-exception-caught
                 # Log but don't fail the request if database save fails
-                logger.error("Failed to save scan to database: %s", db_error, exc_info=True)
+                logger.error("Failed to save scan for '%s': %s", upload_name, type(db_error).__name__)
+                logger.debug("Database save stack for '%s':\n%s", upload_name,
+                             ''.join(traceback.format_tb(db_error.__traceback__)))
 
         return JSONResponse(content=results, status_code=200)
 
     except HTTPException:
         raise
     except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.error("Unexpected error scanning file '%s': %s", file.filename, e, exc_info=True)
+        logger.error("Unexpected error scanning file '%s': %s", upload_name, type(e).__name__)
+        # I keep stack frames for diagnosis without exception text or chained content.
+        logger.debug("Scan stack for '%s':\n%s", upload_name, ''.join(traceback.format_tb(e.__traceback__)))
         raise HTTPException(
             status_code=500,
             detail="Internal server error during scan"
@@ -471,7 +483,7 @@ async def scan_terraform(
             try:
                 await aiofiles.os.remove(tmp_path)
             except Exception as e:  # pylint: disable=broad-exception-caught
-                logger.warning("Failed to cleanup temp file %s: %s", tmp_path, e)
+                logger.warning("Failed to cleanup upload '%s': %s", upload_name, type(e).__name__)
 
 
 @app.get("/metrics")

@@ -6,7 +6,7 @@
 
   **Hybrid Terraform Security Scanner — Deterministic Rules + ML Anomaly Detection**
 
-  [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+  [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
   [![DevSecOps Pipeline](https://github.com/oguarni/terravault/actions/workflows/devsecops.yml/badge.svg)](https://github.com/oguarni/terravault/actions/workflows/devsecops.yml)
   [![Pylint 10.00](https://img.shields.io/badge/pylint-10.00%2F10-2ea44f)](https://pylint.pycqa.org/)
   [![SAST Clean](https://img.shields.io/badge/SAST-0%20issues-2ea44f)](https://bandit.readthedocs.io/)
@@ -85,7 +85,7 @@
 ## Quick Start
 
 ### Prerequisites
-- Python 3.10+
+- Python 3.12+
 - Git
 
 ### Installation
@@ -430,7 +430,7 @@ The Docker image runs as a **non-root user** with `--read-only` filesystem and `
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| Language | Python 3.10+ | ML ecosystem, clean syntax |
+| Language | Python 3.12+ | ML ecosystem, clean syntax |
 | ML Framework | scikit-learn (Isolation Forest) | Unsupervised anomaly detection |
 | Parser | python-hcl2 | Native Terraform HCL2 parsing |
 | API Framework | FastAPI + Uvicorn | Async REST API with OpenAPI docs |

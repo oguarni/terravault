@@ -6,6 +6,7 @@ Constraints affect only packages named in both files, so adding an action-only
 dependency would silently restore an unconstrained install path unless this
 boundary is checked explicitly.
 """
+import importlib.util
 from pathlib import Path
 
 import pytest
@@ -16,9 +17,8 @@ from packaging.utils import canonicalize_name
 pytestmark = pytest.mark.unit
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-ACTION_REQUIREMENTS = (
-    REPO_ROOT / ".github" / "actions" / "terravault-scan" / "requirements.txt"
-)
+ACTION_DIRECTORY = REPO_ROOT / ".github" / "actions" / "terravault-scan"
+ACTION_REQUIREMENTS = ACTION_DIRECTORY / "requirements.txt"
 RUNTIME_REQUIREMENTS = REPO_ROOT / "requirements.txt"
 
 
@@ -42,4 +42,32 @@ def test_action_dependencies_have_runtime_constraints():
     assert not unconstrained, (
         "composite action packages missing from root requirements.txt: "
         f"{', '.join(unconstrained)}"
+    )
+
+
+def test_action_constraints_project_every_runtime_pin(tmp_path):
+    # action.yml generates its constraints at run time, so a requirements.txt
+    # line the generator rejects would break the action only when it runs.
+    spec = importlib.util.spec_from_file_location(
+        "generate_constraints", ACTION_DIRECTORY / "generate-constraints.py"
+    )
+    generator = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(generator)
+    output = tmp_path / "constraints.txt"
+
+    assert generator.main([str(output)]) == 0
+
+    constraints = [
+        Requirement(line.partition("#")[0].strip())
+        for line in output.read_text(encoding="utf-8").splitlines()
+        if line.partition("#")[0].strip()
+    ]
+    # pip refuses a constraints file that carries extras.
+    assert not [str(pin) for pin in constraints if pin.extras]
+    assert all(
+        [specifier.operator for specifier in pin.specifier] == ["=="]
+        for pin in constraints
+    )
+    assert {canonicalize_name(pin.name) for pin in constraints} == _package_names(
+        RUNTIME_REQUIREMENTS
     )
