@@ -101,3 +101,19 @@ def test_parse_rejects_non_utf8_binary_content(tmp_path, parser):
 
     message = str(exc_info.value).lower()
     assert "encoding" in message or "utf" in message
+
+
+def test_parse_error_omits_uploaded_content_and_library_details(tmp_path, parser):
+    canary = 'CANARY_SECRET_9f3b2c'
+    tf_file = tmp_path / 'malformed.tf'
+    tf_file.write_text(f'password = "{canary}"\n@invalid')
+
+    with pytest.raises(TerraformParseError, match='Invalid HCL/JSON syntax') as exc_info:
+        parser.parse(str(tf_file))
+
+    message = str(exc_info.value)
+    assert canary not in message
+    assert str(tf_file) not in message
+    assert 'Token(' not in message
+    assert 'File starts with:' not in message
+    assert exc_info.value.__cause__ is not None

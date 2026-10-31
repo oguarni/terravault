@@ -1,7 +1,45 @@
 """API integration tests — exercise the real FastAPI pipeline via TestClient."""
+import logging
+import os
+import tempfile
+
 import pytest
 
 from terravault.api import UPLOAD_CHUNK_SIZE_BYTES
+
+
+def assert_private_scan_logs(caplog, canary, upload_paths):
+    """Check every terravault log record, DEBUG included, for the canary and the
+    exact temp paths /scan created. Matching the recorded paths, not '/tmp', keeps
+    the check valid when the checkout itself lives under the temp directory."""
+    assert upload_paths
+    records = [record for record in caplog.records if record.name.startswith('terravault')]
+    assert records
+    for record in records:
+        rendered = record.getMessage() + (record.exc_text or '')
+        if record.exc_info:
+            rendered += logging.Formatter().formatException(record.exc_info)
+        assert canary not in rendered
+        for path in upload_paths:
+            assert path not in rendered
+            assert os.path.basename(path) not in rendered
+
+
+@pytest.fixture
+def upload_paths(monkeypatch):
+    """Record the temp files /scan creates."""
+    from terravault import api
+
+    created = []
+    real_mkstemp = api.tempfile.mkstemp
+
+    def recording_mkstemp(*args, **kwargs):
+        fd, path = real_mkstemp(*args, **kwargs)
+        created.append(path)
+        return fd, path
+
+    monkeypatch.setattr(api.tempfile, 'mkstemp', recording_mkstemp)
+    return created
 
 
 # ---------------------------------------------------------------------------
@@ -155,3 +193,96 @@ def test_scan_rejects_file_exceeding_configured_size_limit(
     detail = response.json()["detail"]
     assert "File too large" in detail
     assert "0.0001MB" in detail
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    'filename, expected_name',
+    [('my-infra.tf', 'my-infra.tf'), ('../../my infra.tf', 'my_infra.tf')],
+)
+def test_scan_returns_safe_upload_name(
+    api_client, api_headers, secure_tf, caplog, upload_paths, filename, expected_name,
+):
+    caplog.set_level(logging.DEBUG, logger='terravault')
+    response = api_client.post(
+        '/scan', files={'file': (filename, secure_tf, 'text/plain')}, headers=api_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()['file'] == expected_name
+    assert tempfile.gettempdir() not in response.text
+    assert '/tmp' not in response.text
+    assert_private_scan_logs(caplog, 'no-canary-in-a-valid-upload', upload_paths)
+
+
+@pytest.mark.unit
+def test_malformed_upload_keeps_content_and_paths_private(api_client, api_headers, caplog, upload_paths):
+    canary = 'CANARY_SECRET_9f3b2c'
+    caplog.set_level(logging.DEBUG, logger='terravault')
+    response = api_client.post(
+        '/scan', files={'file': ('broken.tf', f'password = "{canary}"\n@invalid', 'text/plain')},
+        headers=api_headers,
+    )
+
+    assert response.status_code == 422
+    assert response.json()['detail'] == 'Terraform parse error: the file is not valid HCL or JSON'
+    for forbidden in (canary, tempfile.gettempdir(), '/tmp', 'Token('):
+        assert forbidden not in response.text
+    assert_private_scan_logs(caplog, canary, upload_paths)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    'error_type, expected_detail',
+    [
+        ('TerraformParseError', 'Terraform parse error: the file is not valid HCL or JSON'),
+        ('FileNotFoundError', 'Scan failed: the uploaded file is unavailable'),
+        ('PermissionError', 'Scan failed: the uploaded file could not be accessed'),
+        ('ValueError', 'Terraform scan failed'),
+        (None, 'Terraform scan failed'),
+    ],
+)
+def test_scan_failure_uses_controlled_detail(
+    api_client, api_headers, secure_tf, monkeypatch, caplog, upload_paths, error_type, expected_detail,
+):
+    from terravault import api
+
+    canary = 'CANARY_SECRET_9f3b2c'
+    caplog.set_level(logging.DEBUG, logger='terravault')
+
+    def fail_scan(filepath, display_name):
+        return {'score': -1, 'file': filepath, 'error': canary, 'error_type': error_type}
+
+    monkeypatch.setattr(api.scanner, 'scan', fail_scan)
+    response = api_client.post(
+        '/scan', files={'file': ('failed.tf', secure_tf, 'text/plain')}, headers=api_headers,
+    )
+
+    assert response.status_code == 422
+    assert response.json()['detail'] == expected_detail
+    assert_private_scan_logs(caplog, canary, upload_paths)
+
+
+@pytest.mark.unit
+def test_unexpected_scan_exception_keeps_content_private(
+    api_client, api_headers, secure_tf, monkeypatch, caplog, upload_paths,
+):
+    from terravault import api
+
+    canary = 'CANARY_SECRET_9f3b2c'
+    caplog.set_level(logging.DEBUG, logger='terravault')
+
+    def fail_scan(filepath, display_name):
+        raise RuntimeError(canary + filepath)
+
+    monkeypatch.setattr(api.scanner, 'scan', fail_scan)
+    response = api_client.post(
+        '/scan', files={'file': ('../my infra.tf', secure_tf, 'text/plain')}, headers=api_headers,
+    )
+
+    assert response.status_code == 500
+    assert response.json()['detail'] == 'Internal server error during scan'
+    assert_private_scan_logs(caplog, canary, upload_paths)
+    errors = [record for record in caplog.records if record.name == 'terravault.api'
+              and record.levelno == logging.ERROR]
+    assert any("'my_infra.tf': RuntimeError" in record.getMessage() for record in errors)

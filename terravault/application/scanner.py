@@ -2,6 +2,7 @@
 import copy
 import time
 import logging
+import traceback
 import numpy as np
 from pathlib import Path
 import hashlib
@@ -86,12 +87,13 @@ class IntelligentSecurityScanner:
                 self._hash_cache[key] = hashlib.sha256(f.read()).hexdigest()
         return self._hash_cache[key]
 
-    def _get_file_hash(self, filepath: str) -> str:
+    def _get_file_hash(self, filepath: str, display_name: str) -> str:
         """
         Get file hash using cached method.
 
         Args:
             filepath: Path to file
+            display_name: Name used in logs
 
         Returns:
             SHA-256 hash of file content
@@ -100,7 +102,7 @@ class IntelligentSecurityScanner:
             mtime = Path(filepath).stat().st_mtime
             return self._get_file_hash_cached(filepath, mtime)
         except Exception as e:  # pylint: disable=broad-exception-caught
-            logger.warning("Failed to get file hash for %s: %s", filepath, e)
+            logger.warning("Failed to get file hash for %s: %s", display_name, type(e).__name__)
             # Fallback to direct hash without caching
             with open(filepath, 'rb') as f:
                 return hashlib.sha256(f.read()).hexdigest()
@@ -151,12 +153,15 @@ class IntelligentSecurityScanner:
 
         return result, scan_duration
 
-    def scan(self, filepath: str) -> Dict[str, Any]:
+    def scan(self, filepath: str, display_name: Optional[str] = None) -> Dict[str, Any]:
         """
         Main scanning method with performance metrics and improved error handling.
 
         Uses instance-level dict cache to avoid re-scanning unchanged files.
+        The optional display name replaces the path in results and scan logs;
+        file access and cache keys always use the real path.
         """
+        display_name = filepath if display_name is None else display_name
         try:
             # Get file metadata for cache validation
             file_stat = Path(filepath).stat()
@@ -164,14 +169,15 @@ class IntelligentSecurityScanner:
             mtime = file_stat.st_mtime
 
             # Get file hash for cache key
-            file_hash = self._get_file_hash(filepath)
+            file_hash = self._get_file_hash(filepath, display_name)
             cache_key = (filepath, file_hash, mtime)
 
             # Check instance-level cache
             if cache_key in self._scan_cache:
                 cached_result, cached_duration = self._scan_cache[cache_key]
-                logger.info("Scan completed for %s (cached: %ss)", filepath, cached_duration)
+                logger.info("Scan completed for %s (cached: %ss)", display_name, cached_duration)
                 result = copy.deepcopy(cached_result)
+                result['file'] = display_name
                 result['performance'] = {
                     'scan_time_seconds': cached_duration,
                     'file_size_kb': file_size_kb,
@@ -187,44 +193,47 @@ class IntelligentSecurityScanner:
                 self._scan_cache.pop(next(iter(self._scan_cache)))
             self._scan_cache[cache_key] = (copy.deepcopy(result), scan_duration)
 
+            result['file'] = display_name
             result['performance'] = {
                 'scan_time_seconds': scan_duration,
                 'file_size_kb': file_size_kb,
                 'from_cache': False
             }
-            logger.info("Scan completed for %s (%ss)", filepath, scan_duration)
+            logger.info("Scan completed for %s (%ss)", display_name, scan_duration)
             return result
         except TerraformParseError as e:
-            logger.error("Parse error scanning %s: %s", filepath, e)
+            logger.error("Parse error scanning %s", display_name)
             return {
                 'score': -1,
                 'error': f"Parse error: {str(e)}",
                 'error_type': 'TerraformParseError',
-                'file': filepath
+                'file': display_name
             }
         except FileNotFoundError:
-            logger.error("File not found: %s", filepath)
+            logger.error("File not found: %s", display_name)
             return {
                 'score': -1,
-                'error': f"File not found: {filepath}. Please verify the file path exists.",
+                'error': f"File not found: {display_name}. Please verify the file path exists.",
                 'error_type': 'FileNotFoundError',
-                'file': filepath
+                'file': display_name
             }
-        except PermissionError as e:
-            logger.error("Permission denied accessing %s: %s", filepath, e)
+        except PermissionError:
+            logger.error("Permission denied accessing %s", display_name)
             return {
                 'score': -1,
-                'error': f"Permission denied: Cannot access {filepath}. Check file permissions.",
+                'error': f"Permission denied: Cannot access {display_name}. Check file permissions.",
                 'error_type': 'PermissionError',
-                'file': filepath
+                'file': display_name
             }
         except Exception as e:  # pylint: disable=broad-exception-caught
-            logger.error("Unexpected error scanning %s: %s - %s", filepath, type(e).__name__, e, exc_info=True)
+            logger.error("Unexpected error scanning %s: %s", display_name, type(e).__name__)
+            # I omit exception text and chained parser errors because they can contain file content.
+            logger.debug("Scan stack for %s:\n%s", display_name, ''.join(traceback.format_tb(e.__traceback__)))
             return {
                 'score': -1,
-                'error': f"Unexpected {type(e).__name__} error during scan: {str(e)}",
+                'error': f"Unexpected {type(e).__name__} error during scan",
                 'error_type': type(e).__name__,
-                'file': filepath
+                'file': display_name
             }
 
     def _validate_features(self, features: np.ndarray) -> np.ndarray:
