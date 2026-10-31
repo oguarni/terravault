@@ -2,7 +2,7 @@
 .PHONY: help install test run-demo clean docker lint coverage api metrics test-api security-scan security-deps security-sast security-all setup-hooks quality-gate ratchet ratchet-update ratchet-show corpus evaluate evaluate-report evaluate-foreign
 
 # Variables
-PYTHON := python3
+PYTHON := python3.12
 VENV := .venv
 PIP := $(VENV)/bin/pip
 PYTEST := $(VENV)/bin/pytest
