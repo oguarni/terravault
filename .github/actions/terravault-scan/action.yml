@@ -57,7 +57,9 @@ runs:
       run: |
         ACTION_REQUIREMENTS="${{ github.action_path }}/requirements.txt"
         ACTION_PATH="${{ github.action_path }}"
-        pip install -r "$ACTION_REQUIREMENTS" -c "$ACTION_PATH/constraints.txt"
+        CONSTRAINTS="$RUNNER_TEMP/terravault-scan-constraints.txt"
+        python "$ACTION_PATH/generate-constraints.py" "$CONSTRAINTS"
+        pip install -r "$ACTION_REQUIREMENTS" -c "$CONSTRAINTS"
 
     - name: Initialize ML model
       shell: bash

@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
-"""Generate pip-compatible scan-action constraints from runtime requirements."""
+"""Generate pip-compatible scan-action constraints from runtime requirements.
+
+pip rejects extras in a constraints file, so the action cannot pass the root
+requirements.txt to -c directly. action.yml writes this projection at run time
+instead of reading a committed copy, which no dependency update could keep
+current without someone regenerating it by hand.
+"""
 
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
 
 
 ACTION_DIRECTORY = Path(__file__).resolve().parent
 REPOSITORY_ROOT = ACTION_DIRECTORY.parents[2]
 SOURCE = REPOSITORY_ROOT / "requirements.txt"
-DESTINATION = ACTION_DIRECTORY / "constraints.txt"
 
 PINNED_REQUIREMENT = re.compile(
     r"^(?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)"
@@ -25,10 +31,7 @@ SKIPPED_OPTIONS = (
     "-e",
     "--editable",
 )
-HEADER = (
-    "# Generated from requirements.txt; do not edit.\n"
-    "# Regenerate: python .github/actions/terravault-scan/generate-constraints.py\n"
-)
+HEADER = "# Generated from requirements.txt by generate-constraints.py.\n"
 
 
 def project_requirements(source: Path) -> list[str]:
@@ -56,11 +59,16 @@ def project_requirements(source: Path) -> list[str]:
     return projected
 
 
-def main() -> None:
-    """Write the deterministic constraints projection."""
+def main(argv: list[str]) -> int:
+    """Write the deterministic constraints projection to the given path."""
+    if len(argv) != 1:
+        print("usage: generate-constraints.py OUTPUT", file=sys.stderr)
+        return 2
+
     requirements = project_requirements(SOURCE)
-    DESTINATION.write_text(HEADER + "\n".join(requirements) + "\n")
+    Path(argv[0]).write_text(HEADER + "\n".join(requirements) + "\n")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main(sys.argv[1:]))
