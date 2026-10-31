@@ -28,7 +28,7 @@ pylint==4.0.10
 # tree was never black-clean to begin with.
 black==26.10.1
 flake8==7.3.0
-pre-commit==4.6.2
+pre-commit==4.7.0
 # Transitive (pre-commit -> virtualenv, python-discovery). 4.2.1 fixes 17
 # advisories (CVE-2026-112906 to -112941), one of which, GHSA-69hj-f68j-2879,
 # affects every earlier release, so no older version is a way out. 4.2.x
@@ -57,4 +57,4 @@ pip-audit==2.10.1
 cyclonedx-bom==7.3.1
 # Pinned for the same reason as starlette: a transitive security floor should
 # be reproducible, not left to whatever satisfies `lxml<7` on the day.
-lxml==6.1.2
+lxml==6.1.3
