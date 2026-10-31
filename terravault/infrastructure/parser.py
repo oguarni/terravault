@@ -242,22 +242,13 @@ class HCLParser:
             logger.debug("Successfully parsed HCL file: %s", filepath)
             return tf_content, raw_content
         except Exception as hcl_error:  # pylint: disable=broad-exception-caught
-            logger.debug("HCL2 parse failed: %s", hcl_error)
+            logger.debug("HCL2 parse failed; trying JSON")
             # Fallback to JSON parsing for .tf.json files
             try:
                 tf_content = json.loads(raw_content)
                 logger.debug("Successfully parsed JSON file: %s", filepath)
                 return tf_content, raw_content
-            except json.JSONDecodeError as json_error:
-                # Provide context from the file content
-                content_preview = raw_content[:200].strip() if raw_content else "(empty file)"
-                if len(raw_content) > 200:
-                    content_preview += "..."
-                error_msg = (
-                    f"Invalid HCL/JSON syntax in {filepath}. "
-                    f"File appears to be neither valid HCL nor JSON. "
-                    f"HCL error: {str(hcl_error)[:100]}. "
-                    f"JSON error: {str(json_error)[:100]}. "
-                    f"File starts with: {content_preview}"
-                )
-                raise TerraformParseError(error_msg) from hcl_error
+            except json.JSONDecodeError:
+                raise TerraformParseError(
+                    "Invalid HCL/JSON syntax: the file is not valid HCL or JSON"
+                ) from hcl_error
